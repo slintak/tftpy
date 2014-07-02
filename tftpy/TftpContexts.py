@@ -67,15 +67,18 @@ class TftpMetrics(object):
 class TftpContext(object):
     """The base class of the contexts."""
 
-    def __init__(self, host, port, timeout):
+    def __init__(self, host, port, timeout, sock=None):
         """Constructor for the base context, setting shared instance
         variables."""
         self.file_to_transfer = None
         self.fileobj = None
         self.options = None
         self.packethook = None
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.sock.settimeout(timeout)
+        if not sock:
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            self.sock.settimeout(timeout)
+        else:
+            self.sock = sock
         self.timeout = timeout
         self.state = None
         self.next_block = 0
@@ -122,7 +125,7 @@ class TftpContext(object):
         called explicitely by the calling code, this works better than the
         destructor."""
         log.debug("in TftpContext.end")
-        self.sock.close()
+        # self.sock.close()
         if self.fileobj is not None and not self.fileobj.closed:
             log.debug("self.fileobj is open - closing")
             self.fileobj.close()
@@ -150,14 +153,18 @@ class TftpContext(object):
 
     next_block = property(getNextBlock, setNextBlock)
 
-    def cycle(self):
+    def cycle(self, buffer=None):
         """Here we wait for a response from the server after sending it
         something, and dispatch appropriate action to that response."""
-        try:
-            (buffer, (raddress, rport)) = self.sock.recvfrom(MAX_BLKSIZE)
-        except socket.timeout:
-            log.warn("Timeout waiting for traffic, retrying...")
-            raise TftpTimeout, "Timed-out waiting for traffic"
+        if not buffer:
+            try:
+                (buffer, (raddress, rport)) = self.sock.recvfrom(MAX_BLKSIZE)
+            except socket.timeout:
+                log.warn("Timeout waiting for traffic, retrying...")
+                raise TftpTimeout, "Timed-out waiting for traffic"
+        else:
+            raddress = self.host
+            rport = self.port
 
         # Ok, we've received a packet. Log it.
         log.debug("Received %d bytes from %s:%s",
@@ -194,11 +201,12 @@ class TftpContext(object):
 
 class TftpContextServer(TftpContext):
     """The context for the server."""
-    def __init__(self, host, port, timeout, root, dyn_file_func=None):
+    def __init__(self, host, port, timeout, root, dyn_file_func=None, sock=None):
         TftpContext.__init__(self,
                              host,
                              port,
                              timeout,
+                             sock,
                              )
         # At this point we have no idea if this is a download or an upload. We
         # need to let the start state determine that.
