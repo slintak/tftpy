@@ -291,24 +291,24 @@ class TftpStateServerRecvRRQ(TftpServerState):
         log.debug("In TftpStateServerRecvRRQ.handle")
         sendoack = self.serverInitial(pkt, raddress, rport)
         path = self.full_path
-        log.info("Opening file %s for reading" % path)
-        if os.path.exists(path):
+        filename = self.context.file_to_transfer
+
+        # If dyn_file_func is set, we use it instead of filesystem.
+        if self.context.dyn_file_func:
+            log.debug("Using dyn_file_func: getting %s", filename)
+            self.context.fileobj = self.context.dyn_file_func(filename)
+        elif os.path.exists(path):
             # Note: Open in binary mode for win32 portability, since win32
             # blows.
+            log.debug("Reding file from filesystem: %s", path)
             self.context.fileobj = open(path, "rb")
-        elif self.context.dyn_file_func:
-            log.debug("No such file %s but using dyn_file_func", path)
-            self.context.fileobj = \
-                self.context.dyn_file_func(self.context.file_to_transfer)
-
-            if self.context.fileobj is None:
-                log.debug("dyn_file_func returned 'None', treating as "
-                          "FileNotFound")
-                self.sendError(TftpErrors.FileNotFound)
-                raise TftpException, "File not found: %s" % path
         else:
+            self.context.fileobj = None
+
+        if self.context.fileobj is None:
+            log.debug("File not dound: %s" % filename)
             self.sendError(TftpErrors.FileNotFound)
-            raise TftpException, "File not found: %s" % path
+            raise TftpException, "File not found: %s" % filename
 
         # Options negotiation.
         if sendoack:
