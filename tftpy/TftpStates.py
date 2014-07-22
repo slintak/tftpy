@@ -1,5 +1,5 @@
 """This module implements all state handling during uploads and downloads, the
-main interface to which being the TftpState base class. 
+main interface to which being the TftpState base class.
 
 The concept is simple. Each context object represents a single upload or
 download, and the state object in the context object represents the current
@@ -308,7 +308,7 @@ class TftpStateServerRecvRRQ(TftpServerState):
         if self.context.fileobj is None:
             log.debug("File not dound: %s" % filename)
             self.sendError(TftpErrors.FileNotFound)
-            raise TftpException, "File not found: %s" % filename
+            raise TftpFileNotFound("file %s" % filename)
 
         # Options negotiation.
         if sendoack:

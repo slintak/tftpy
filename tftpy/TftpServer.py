@@ -65,8 +65,8 @@ class TftpServer(TftpSession):
         # Don't use new 2.5 ternary operator yet
         # listenip = listenip if listenip else '0.0.0.0'
         if not listenip: listenip = '0.0.0.0'
-        log.info("Server requested on ip %s, port %s"
-                % (listenip, listenport))
+        log.info("Server requested on ip %s, port %s, singleport %s"
+                % (listenip, listenport, singleport))
         try:
             # FIXME - sockets should be non-blocking
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -93,7 +93,7 @@ class TftpServer(TftpSession):
                     self.sock.close()
                     break
 
-            
+
 
             self.deletion_list = []
 
@@ -150,7 +150,7 @@ class TftpServer(TftpSession):
     def singleport_loop(self, timeout):
         # Build the inputlist array of sockets to select() on.
         inputlist = [self.sock]
-        
+
         # Block until some socket has input on it.
         log.debug("Performing select on this inputlist: %s", inputlist)
         readyinput, readyoutput, readyspecial = select.select(
@@ -184,9 +184,13 @@ class TftpServer(TftpSession):
                     self.dyn_file_func,
                     readysock
                 )
-                
+
                 try:
                     self.sessions[key].start(buffer)
+                except TftpFileNotFound, err:
+                    self.deletion_list.append(key)
+                    log.info("File not found for session %s: %s"
+                        % (key, str(err)))
                 except TftpException, err:
                     self.deletion_list.append(key)
                     log.error("Fatal exception thrown from "
@@ -197,11 +201,15 @@ class TftpServer(TftpSession):
                     if self.sessions[key].state == None:
                         log.info("Successful transfer.")
                         self.deletion_list.append(key)
+                except TftpFileNotFound, err:
+                    self.deletion_list.append(key)
+                    log.info("File not found for session %s: %s"
+                        % (key, str(err)))
                 except TftpException, err:
                     self.deletion_list.append(key)
                     log.error("Fatal exception thrown from "
-                                  "session %s: %s"
-                                  % (key, str(err)))
+                              "session %s: %s"
+                              % (key, str(err)))
 
     def standard_loop(self, timeout):
         # Build the inputlist array of sockets to select() on.

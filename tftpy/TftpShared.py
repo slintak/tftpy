@@ -57,3 +57,8 @@ class TftpTimeout(TftpException):
     """This class represents a timeout error waiting for a response from the
     other end."""
     pass
+
+
+class TftpFileNotFound(TftpException):
+    """When client ask for non existing file, this exception is raised."""
+    pass
