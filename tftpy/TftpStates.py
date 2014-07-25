@@ -127,7 +127,7 @@ class TftpState(object):
         errpkt.errorcode = errorcode
         self.context.sock.sendto(errpkt.encode().buffer,
                                  (self.context.host,
-                                  self.context.tidport))
+                                  self.context.port))
         self.context.last_pkt = errpkt
 
     def sendOACK(self):
@@ -143,7 +143,7 @@ class TftpState(object):
 
     def resendLast(self):
         "Resend the last sent packet due to a timeout."
-        log.warn("Resending packet %s on sessions %s"
+        log.info("Resending packet %s on sessions %s"
             % (self.context.last_pkt, self))
         self.context.metrics.resent_bytes += len(self.context.last_pkt.buffer)
         self.context.metrics.add_dup(self.context.last_pkt)

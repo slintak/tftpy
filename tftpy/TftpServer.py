@@ -60,11 +60,13 @@ class TftpServer(TftpSession):
         """Start a server listening on the supplied interface and port. This
         defaults to INADDR_ANY (all interfaces) and UDP port 69. You can also
         supply a different socket timeout value, if desired."""
-        tftp_factory = TftpPacketFactory()
+        # tftp_factory = TftpPacketFactory()
 
         # Don't use new 2.5 ternary operator yet
         # listenip = listenip if listenip else '0.0.0.0'
-        if not listenip: listenip = '0.0.0.0'
+        if not listenip:
+            listenip = '0.0.0.0'
+
         log.info("Server requested on ip %s, port %s, singleport %s"
                 % (listenip, listenport, singleport))
         try:
@@ -92,8 +94,6 @@ class TftpServer(TftpSession):
                     log.warn("In graceful shutdown mode and all sessions complete.")
                     self.sock.close()
                     break
-
-
 
             self.deletion_list = []
 
@@ -170,7 +170,7 @@ class TftpServer(TftpSession):
                 log.warn("Discarding data, in graceful shutdown mode")
                 continue
 
-            if not self.sessions.has_key(key):
+            if key not in self.sessions:
                 log.debug(
                     "Creating new server context for session key = %s",
                     key
@@ -198,7 +198,7 @@ class TftpServer(TftpSession):
             else:
                 try:
                     self.sessions[key].cycle(buffer)
-                    if self.sessions[key].state == None:
+                    if self.sessions[key].state is None:
                         log.info("Successful transfer.")
                         self.deletion_list.append(key)
                 except TftpFileNotFound, err:
