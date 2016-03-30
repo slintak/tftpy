@@ -35,11 +35,11 @@ class TftpState(object):
         options."""
         if pkt.options.keys() > 0:
             if pkt.match_options(self.context.options):
-                log.info("Successful negotiation of options")
+                log.debug("Successful negotiation of options")
                 # Set options to OACK options
                 self.context.options = pkt.options
                 for key in self.context.options:
-                    log.info("    %s = %s" % (key, self.context.options[key]))
+                    log.debug("    %s = %s" % (key, self.context.options[key]))
             else:
                 log.error("Failed to negotiate options")
                 raise TftpException, "Failed to negotiate options"
@@ -56,11 +56,11 @@ class TftpState(object):
             if option == 'blksize':
                 # Make sure it's valid.
                 if int(options[option]) > MAX_BLKSIZE:
-                    log.info("Client requested blksize greater than %d "
+                    log.debug("Client requested blksize greater than %d "
                              "setting to maximum" % MAX_BLKSIZE)
                     accepted_options[option] = MAX_BLKSIZE
                 elif int(options[option]) < MIN_BLKSIZE:
-                    log.info("Client requested blksize less than %d "
+                    log.debug("Client requested blksize less than %d "
                              "setting to minimum" % MIN_BLKSIZE)
                     accepted_options[option] = MIN_BLKSIZE
                 else:
@@ -69,7 +69,7 @@ class TftpState(object):
                 log.debug("tsize option is set")
                 accepted_options['tsize'] = 1
             else:
-                log.info("Dropping unsupported option '%s'" % option)
+                log.debug("Dropping unsupported option '%s'" % option)
         log.debug("Returning these accepted options: %s", accepted_options)
         return accepted_options
 
@@ -89,7 +89,7 @@ class TftpState(object):
         buffer = self.context.fileobj.read(blksize)
         log.debug("Read %d bytes into buffer", len(buffer))
         if len(buffer) < blksize:
-            log.info("Reached EOF on file %s"
+            log.debug("Reached EOF on file %s"
                 % self.context.file_to_transfer)
             finished = True
         dat = TftpPacketDAT()
@@ -111,7 +111,7 @@ class TftpState(object):
         log.debug("In sendACK, passed blocknumber is %s", blocknumber)
         if blocknumber is None:
             blocknumber = self.context.next_block
-        log.info("Sending ack to block %d" % blocknumber)
+        log.debug("Sending ack to block %d" % blocknumber)
         ackpkt = TftpPacketACK()
         ackpkt.blocknumber = blocknumber
         self.context.sock.sendto(ackpkt.encode().buffer,
@@ -143,7 +143,7 @@ class TftpState(object):
 
     def resendLast(self):
         "Resend the last sent packet due to a timeout."
-        log.info("Resending packet %s on sessions %s"
+        log.debug("Resending packet %s on sessions %s"
             % (self.context.last_pkt, self))
         self.context.metrics.resent_bytes += len(self.context.last_pkt.buffer)
         self.context.metrics.add_dup(self.context.last_pkt)
@@ -161,7 +161,7 @@ class TftpState(object):
     def handleDat(self, pkt):
         """This method handles a DAT packet during a client download, or a
         server upload."""
-        log.info("Handling DAT packet - block %d" % pkt.blocknumber)
+        log.debug("Handling DAT packet - block %d" % pkt.blocknumber)
         log.debug("Expecting block %s", self.context.next_block)
         if pkt.blocknumber == self.context.next_block:
             log.debug("Good, received block %d in sequence", pkt.blocknumber)
@@ -174,7 +174,7 @@ class TftpState(object):
             self.context.metrics.bytes += len(pkt.data)
             # Check for end-of-file, any less than full data packet.
             if len(pkt.data) < self.context.getBlocksize():
-                log.info("End of file detected")
+                log.debug("End of file detected")
                 return None
 
         elif pkt.blocknumber < self.context.next_block:
@@ -217,7 +217,7 @@ class TftpServerState(TftpState):
         sendoack = False
         if not self.context.tidport:
             self.context.tidport = rport
-            log.info("Setting tidport to %s" % rport)
+            log.debug("Setting tidport to %s" % rport)
 
         log.debug("Setting default options, blksize")
         self.context.options = { 'blksize': DEF_BLKSIZE }
@@ -272,7 +272,7 @@ class TftpServerState(TftpState):
         self.full_path = os.path.abspath(full_path)
         log.debug("full_path is %s", full_path)
         if self.full_path.startswith(self.context.root):
-            log.info("requested file is in the server root - good")
+            log.debug("requested file is in the server root - good")
         else:
             log.warn("requested file is not within the server root - bad")
             self.sendError(TftpErrors.IllegalTftpOp)
@@ -355,7 +355,7 @@ class TftpStateServerRecvWRQ(TftpServerState):
         log.debug("In TftpStateServerRecvWRQ.handle")
         sendoack = self.serverInitial(pkt, raddress, rport)
         path = self.full_path
-        log.info("Opening file %s for writing" % path)
+        log.debug("Opening file %s for writing" % path)
         if os.path.exists(path):
             # FIXME: correct behavior?
             log.warn("File %s exists already, overwriting..." % self.context.file_to_transfer)
@@ -412,11 +412,11 @@ class TftpStateExpectACK(TftpState):
     def handle(self, pkt, raddress, rport):
         "Handle a packet, hopefully an ACK since we just sent a DAT."
         if isinstance(pkt, TftpPacketACK):
-            log.info("Received ACK for packet %d" % pkt.blocknumber)
+            log.debug("Received ACK for packet %d" % pkt.blocknumber)
             # Is this an ack to the one we just sent?
             if self.context.next_block == pkt.blocknumber:
                 if self.context.pending_complete:
-                    log.info("Received ACK to final DAT, we're done.")
+                    log.debug("Received ACK to final DAT, we're done.")
                     return None
                 else:
                     log.debug("Good ACK, sending next DAT")
@@ -479,7 +479,7 @@ class TftpStateSentWRQ(TftpState):
         # If we're going to successfully transfer the file, then we should see
         # either an OACK for accepted options, or an ACK to ignore options.
         if isinstance(pkt, TftpPacketOACK):
-            log.info("Received OACK from server")
+            log.debug("Received OACK from server")
             try:
                 self.handleOACK(pkt)
             except TftpException:
@@ -493,7 +493,7 @@ class TftpStateSentWRQ(TftpState):
                 return TftpStateExpectACK(self.context)
 
         elif isinstance(pkt, TftpPacketACK):
-            log.info("Received ACK from server")
+            log.debug("Received ACK from server")
             log.debug("Apparently the server ignored our options")
             # The block number should be zero.
             if pkt.blocknumber == 0:
@@ -532,11 +532,11 @@ class TftpStateSentRRQ(TftpState):
         """Handle the packet in response to an RRQ to the server."""
         if not self.context.tidport:
             self.context.tidport = rport
-            log.info("Set remote port for session to %s" % rport)
+            log.debug("Set remote port for session to %s" % rport)
 
         # Now check the packet type and dispatch it properly.
         if isinstance(pkt, TftpPacketOACK):
-            log.info("Received OACK from server")
+            log.debug("Received OACK from server")
             try:
                 self.handleOACK(pkt)
             except TftpException, err:
@@ -554,9 +554,9 @@ class TftpStateSentRRQ(TftpState):
         elif isinstance(pkt, TftpPacketDAT):
             # If there are any options set, then the server didn't honour any
             # of them.
-            log.info("Received DAT from server")
+            log.debug("Received DAT from server")
             if self.context.options:
-                log.info("Server ignored options, falling back to defaults")
+                log.debug("Server ignored options, falling back to defaults")
                 self.context.options = { 'blksize': DEF_BLKSIZE }
             return self.handleDat(pkt)
 

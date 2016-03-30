@@ -67,7 +67,7 @@ class TftpServer(TftpSession):
         if not listenip:
             listenip = '0.0.0.0'
 
-        log.info("Server requested on ip %s, port %s, singleport %s"
+        log.debug("Server requested on ip %s, port %s, singleport %s"
                 % (listenip, listenport, singleport))
         try:
             # FIXME - sockets should be non-blocking
@@ -77,7 +77,7 @@ class TftpServer(TftpSession):
             # Reraise it for now.
             raise
 
-        log.info("Starting receive loop...")
+        log.debug("Starting receive loop...")
         while True:
             log.debug("shutdown_immediately is %s", self.shutdown_immediately)
             log.debug("shutdown_gracefully is %s", self.shutdown_gracefully)
@@ -120,20 +120,20 @@ class TftpServer(TftpSession):
 
             log.debug("Iterating deletion list.")
             for key in self.deletion_list:
-                log.info('')
-                log.info("Session %s complete" % key)
+                log.debug('')
+                log.debug("Session %s complete" % key)
                 if self.sessions.has_key(key):
                     log.debug("Gathering up metrics from session before deleting")
                     self.sessions[key].end()
                     metrics = self.sessions[key].metrics
                     if metrics.duration == 0:
-                        log.info("Duration too short, rate undetermined")
+                        log.debug("Duration too short, rate undetermined")
                     else:
-                        log.info("Transferred %d bytes in %.2f seconds"
+                        log.debug("Transferred %d bytes in %.2f seconds"
                             % (metrics.bytes, metrics.duration))
-                        log.info("Average rate: %.2f kbps" % metrics.kbps)
-                    log.info("%.2f bytes in resent data" % metrics.resent_bytes)
-                    log.info("%d duplicate packets" % metrics.dupcount)
+                        log.debug("Average rate: %.2f kbps" % metrics.kbps)
+                    log.debug("%.2f bytes in resent data" % metrics.resent_bytes)
+                    log.debug("%d duplicate packets" % metrics.dupcount)
                     log.debug("Deleting session %s", key)
 
                     if not singleport:
@@ -189,7 +189,7 @@ class TftpServer(TftpSession):
                     self.sessions[key].start(buffer)
                 except TftpFileNotFound, err:
                     self.deletion_list.append(key)
-                    log.info("File not found for session %s: %s"
+                    log.debug("File not found for session %s: %s"
                         % (key, str(err)))
                 except TftpException, err:
                     self.deletion_list.append(key)
@@ -199,11 +199,11 @@ class TftpServer(TftpSession):
                 try:
                     self.sessions[key].cycle(buffer)
                     if self.sessions[key].state is None:
-                        log.info("Successful transfer.")
+                        log.debug("Successful transfer.")
                         self.deletion_list.append(key)
                 except TftpFileNotFound, err:
                     self.deletion_list.append(key)
-                    log.info("File not found for session %s: %s"
+                    log.debug("File not found for session %s: %s"
                         % (key, str(err)))
                 except TftpException, err:
                     self.deletion_list.append(key)
@@ -261,20 +261,20 @@ class TftpServer(TftpSession):
                 else:
                     log.warn("received traffic on main socket for "
                              "existing session??")
-                log.info("Currently handling these sessions:")
+                log.debug("Currently handling these sessions:")
                 for session_key, session in self.sessions.items():
-                    log.info("    %s" % session)
+                    log.debug("    %s" % session)
 
             else:
                 # Must find the owner of this traffic.
                 for key in self.sessions:
                     if readysock == self.sessions[key].sock:
-                        log.info("Matched input to session key %s"
+                        log.debug("Matched input to session key %s"
                             % key)
                         try:
                             self.sessions[key].cycle()
                             if self.sessions[key].state == None:
-                                log.info("Successful transfer.")
+                                log.debug("Successful transfer.")
                                 self.deletion_list.append(key)
                         except TftpException, err:
                             self.deletion_list.append(key)

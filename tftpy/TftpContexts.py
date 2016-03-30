@@ -280,9 +280,9 @@ class TftpContextClientUpload(TftpContext):
         return "%s:%s %s" % (self.host, self.port, self.state)
 
     def start(self):
-        log.info("Sending tftp upload request to %s" % self.host)
-        log.info("    filename -> %s" % self.file_to_transfer)
-        log.info("    options -> %s" % self.options)
+        log.debug("Sending tftp upload request to %s" % self.host)
+        log.debug("    filename -> %s" % self.file_to_transfer)
+        log.debug("    options -> %s" % self.options)
 
         self.metrics.start_time = time.time()
         log.debug("Set metrics.start_time to %s", self.metrics.start_time)
@@ -359,9 +359,9 @@ class TftpContextClientDownload(TftpContext):
 
     def start(self):
         """Initiate the download."""
-        log.info("Sending tftp download request to %s" % self.host)
-        log.info("    filename -> %s" % self.file_to_transfer)
-        log.info("    options -> %s" % self.options)
+        log.debug("Sending tftp download request to %s" % self.host)
+        log.debug("    filename -> %s" % self.file_to_transfer)
+        log.debug("    options -> %s" % self.options)
 
         self.metrics.start_time = time.time()
         log.debug("Set metrics.start_time to %s", self.metrics.start_time)
